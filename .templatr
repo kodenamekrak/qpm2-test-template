@@ -1,7 +1,7 @@
 {
   "name": "Quest Mod Template",
   "author": "Lauriethefish",
-  "src": ".",
+  "src": "./template",
   "description": "Template for creating QuestPatcher/BMBF mods for the Oculus Quest.",
   "placeholders": [
     {"match": "#{ndkpath}", "prompt": "The path to the android NDK", "cachable": true},
