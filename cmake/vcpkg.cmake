@@ -1,0 +1,14 @@
+include_guard()
+
+string(REPLACE "\\" "/" VCPKG_ROOT_WINDOWS_FIX $ENV{VCPKG_ROOT})
+
+# vcpkg config
+message("VCPKG $ENV{VCPKG_ROOT}")
+
+# chain the toolchain file for vcpkg
+set(VCPKG_TOOLCHAIN_FILE ${VCPKG_ROOT_WINDOWS_FIX}/scripts/buildsystems/vcpkg.cmake)
+if("${CMAKE_TOOLCHAIN_FILE}" MATCHES ".+" AND NOT "${CMAKE_TOOLCHAIN_FILE}" STREQUAL "${VCPKG_TOOLCHAIN_FILE}")
+    set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE})
+endif()
+
+set(CMAKE_TOOLCHAIN_FILE ${VCPKG_TOOLCHAIN_FILE})

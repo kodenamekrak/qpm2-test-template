@@ -1,0 +1,79 @@
+include_guard()
+
+macro(json_array_to_list return_list json member)
+    set(${return_list} "")
+
+    string(JSON json_array ERROR_VARIABLE err GET ${json} ${member})
+    if(NOT "${json_array}" MATCHES "NOTFOUND")
+        string(JSON json_array_length LENGTH ${json} ${member})
+        if(${json_array_length} GREATER 0)
+            math(EXPR json_array_max "${json_array_length} - 1")
+            foreach(idx RANGE 0 ${json_array_max})
+                string(JSON json_member GET ${json_array} ${idx})
+                list(APPEND ${return_list} ${json_member})
+            endforeach()
+        endif()
+    endif()
+endmacro()
+
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/toolchain.json QPM_TOOLCHAIN_JSON)
+
+string(JSON QPM_TOOLCHAIN_EXTERN_DIR GET ${QPM_TOOLCHAIN_JSON} externDir)
+string(JSON QPM_TOOLCHAIN_LIBS_DIR GET ${QPM_TOOLCHAIN_JSON} libsDir)
+string(JSON QPM_TOOLCHAIN_INCLUDE_DIR GET ${QPM_TOOLCHAIN_JSON} includeDir)
+string(JSON QPM_TOOLCHAIN_SHARED_DIR GET ${QPM_TOOLCHAIN_JSON} sharedDir)
+string(JSON QPM_TOOLCHAIN_BUILD_OUT GET ${QPM_TOOLCHAIN_JSON} buildOut)
+string(JSON QPM_TOOLCHAIN_TRIPLET_OUT GET ${QPM_TOOLCHAIN_JSON} tripletOut)
+string(JSON QPM_TOOLCHAIN_PACKAGE_ID GET ${QPM_TOOLCHAIN_JSON} packageId)
+string(JSON QPM_TOOLCHAIN_PACKAGE_VERSION GET ${QPM_TOOLCHAIN_JSON} packageVersion)
+string(JSON QPM_TOOLCHAIN_RESTORED_TRIPLET GET ${QPM_TOOLCHAIN_JSON} restoredTriplet)
+
+# Make paths absolute
+string(PREPEND QPM_TOOLCHAIN_EXTERN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/")
+string(PREPEND QPM_TOOLCHAIN_LIBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/")
+string(PREPEND QPM_TOOLCHAIN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/")
+string(PREPEND QPM_TOOLCHAIN_SHARED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/")
+string(PREPEND QPM_TOOLCHAIN_BUILD_OUT "${CMAKE_CURRENT_SOURCE_DIR}/")
+string(PREPEND QPM_TOOLCHAIN_TRIPLET_OUT "${CMAKE_CURRENT_SOURCE_DIR}/")
+
+string(JSON QPM_TOOLCHAIN_COMPILE_OPTIONS GET ${QPM_TOOLCHAIN_JSON} compileOptions)
+
+set(QPM_TOOLCHAIN_LINKED_BINARIES "")
+string(JSON QPM_TOOLCHAIN_LINKED_BINARIES_PACKAGE_COUNT LENGTH ${QPM_TOOLCHAIN_JSON} linkedBinaries)
+if(${QPM_TOOLCHAIN_LINKED_BINARIES_PACKAGE_COUNT} GREATER 0)
+    string(JSON QPM_TOOLCHAIN_LINKED_BINARIES_JSON GET ${QPM_TOOLCHAIN_JSON} linkedBinaries)
+    math(EXPR binary_packages_max "${QPM_TOOLCHAIN_LINKED_BINARIES_PACKAGE_COUNT} - 1")
+    foreach(idx RANGE 0 ${binary_packages_max})
+        string(JSON package_name MEMBER ${QPM_TOOLCHAIN_LINKED_BINARIES_JSON} ${idx})
+        json_array_to_list(linked_binaries ${QPM_TOOLCHAIN_LINKED_BINARIES_JSON} ${package_name})
+	list(LENGTH linked_binaries linked_binaries_count)
+	if(linked_binaries_count GREATER 0)
+	    list(TRANSFORM linked_binaries PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
+            list(APPEND QPM_TOOLCHAIN_LINKED_BINARIES "${linked_binaries}")
+	endif()
+    endforeach()
+endif()
+
+json_array_to_list(QPM_TOOLCHAIN_COMPILE_OPTIONS_INCLUDE_PATHS ${QPM_TOOLCHAIN_COMPILE_OPTIONS} includePaths)
+json_array_to_list(QPM_TOOLCHAIN_COMPILE_OPTIONS_SYSTEM_INCLUDES ${QPM_TOOLCHAIN_COMPILE_OPTIONS} systemIncludes)
+json_array_to_list(QPM_TOOLCHAIN_COMPILE_OPTIONS_CPP_FLAGS ${QPM_TOOLCHAIN_COMPILE_OPTIONS} cppFlags)
+json_array_to_list(QPM_TOOLCHAIN_COMPILE_OPTIONS_C_FLAGS ${QPM_TOOLCHAIN_COMPILE_OPTIONS} cFlags)
+
+list(TRANSFORM QPM_TOOLCHAIN_COMPILE_OPTIONS_INCLUDE_PATHS PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
+list(TRANSFORM QPM_TOOLCHAIN_COMPILE_OPTIONS_SYSTEM_INCLUDES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
+
+# Add compile flags
+string(REPLACE ";" " " QPM_TOOLCHAIN_COMPILE_OPTIONS_CPP_FLAGS "${QPM_TOOLCHAIN_COMPILE_OPTIONS_CPP_FLAGS}")
+string(APPEND CMAKE_CXX_FLAGS " ${QPM_TOOLCHAIN_COMPILE_OPTIONS_CPP_FLAGS}")
+string(REPLACE ";" " " QPM_TOOLCHAIN_COMPILE_OPTIONS_C_FLAGS "${QPM_TOOLCHAIN_COMPILE_OPTIONS_C_FLAGS}")
+string(APPEND CMAKE_C_FLAGS " ${QPM_TOOLCHAIN_COMPILE_OPTIONS_C_FLAGS}")
+
+include_directories(${CMAKE_PROJECT_NAME} PRIVATE "${QPM_TOOLCHAIN_INCLUDE_DIR}" ${QPM_TOOLCHAIN_COMPILE_OPTIONS_INCLUDE_PATHS})
+include_directories(${CMAKE_PROJECT_NAME} PRIVATE SYSTEM ${QPM_TOOLCHAIN_COMPILE_OPTIONS_SYSTEM_INCLUDES})
+
+cmake_language(DEFER DIRECTORY ${CMAKE_SOURCE_DIR} CALL _setup_link_libraries())
+
+function(_setup_link_libraries)
+    target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE ${QPM_TOOLCHAIN_LIBS_DIR})
+    target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${QPM_TOOLCHAIN_LINKED_BINARIES})
+endfunction()

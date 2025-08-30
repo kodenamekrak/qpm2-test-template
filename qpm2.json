@@ -1,0 +1,43 @@
+{
+  "$schema": "https://raw.githubusercontent.com/QuestPackageManager/QPM.Package/refs/heads/main/qpm.schema.json",
+  "id": "#{id}",
+  "version": "0.1.0",
+  "dependenciesDirectory": "extern",
+  "sharedDirectory": "shared",
+  "workspace": {
+    "scripts": {
+      "build": [
+        "pwsh ./scripts/build.ps1"
+      ],
+      "copy": [
+        "pwsh ./scripts/copy.ps1 $0:?"
+      ],
+      "qmod": [
+        "pwsh ./scripts/build.ps1",
+        "pwsh ./scripts/createqmod.ps1"
+      ]
+    }
+  },
+  "additionalData": {
+    "description": "",
+    "author": "",
+    "license": ""
+  },
+  "triplets": {
+    "default": "shared",
+    "shared": {
+      "dependencies": {},
+      "devDependencies": {},
+      "env": {},
+      "qmodId": "#{id}",
+      "qmodIncludeDirs": [],
+      "qmodIncludeFiles": [],
+      "qmodTemplate": "mod.template.json",
+      "outBinaries": [
+        "build/lib#{id}.so"
+      ]
+    }
+  },
+  "configVersion": "2.0.0",
+  "toolchainOut": "toolchain.json"
+}
